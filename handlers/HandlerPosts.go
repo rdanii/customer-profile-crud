@@ -104,7 +104,7 @@ func ListUsers(w http.ResponseWriter, r *http.Request) {
 	connection.DB.
 		Limit(take).
 		Offset(page).
-		Order("id").
+		Order(`id`).
 		Find(&users)
 
 	res := structs.Result{
