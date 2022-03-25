@@ -19,5 +19,5 @@ func HandleReq() {
 	// myRouter.HandleFunc("/article/{id}", UpdateArticle).Methods("OPTIONS", "PUT")
 	// myRouter.HandleFunc("/article/{id}", DeleteArticle).Methods("OPTIONS", "Delete")
 
-	log.Fatal(http.ListenAndServe(":8000", myRouter))
+	log.Fatal(http.ListenAndServe(":5002", myRouter))
 }
