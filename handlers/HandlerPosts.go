@@ -156,13 +156,11 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userID := vars["id"]
 
-	users := []structs.Users{}
-	connection.DB.First(&users, userID)
-	connection.DB.Delete(&users)
+	var user structs.Users
+	connection.DB.First(&user, userID)
+	connection.DB.Delete(&user)
 
-	res := structs.Result{
-		Message: "Success delete user",
-	}
+	res := structs.Result{Message: "Success delete user"}
 	result, err := json.Marshal(res)
 
 	if err != nil {
