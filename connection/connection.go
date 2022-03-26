@@ -1,7 +1,7 @@
 package connection
 
 import (
-	"go-crud-article/structs"
+	"customer-profile-crud/structs"
 	"log"
 
 	"github.com/jinzhu/gorm"
@@ -14,7 +14,7 @@ var (
 )
 
 func Connect() {
-	DB, Err = gorm.Open("mysql", "root:@/data_nasabah?charset=utf8&parseTime=True")
+	DB, Err = gorm.Open("mysql", "root:@/data_nasabah?charset=utf8&parseTime=True"+"&loc=Local"+"&timeout=10s")
 
 	if Err != nil {
 		log.Println("Connection failed", Err)

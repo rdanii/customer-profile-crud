@@ -1,8 +1,8 @@
 package main
 
 import (
-	"go-crud-article/connection"
-	"go-crud-article/handlers"
+	"customer-profile-crud/connection"
+	"customer-profile-crud/handlers"
 )
 
 func main() {

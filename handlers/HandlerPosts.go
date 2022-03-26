@@ -1,10 +1,10 @@
 package handlers
 
 import (
+	"customer-profile-crud/connection"
+	"customer-profile-crud/structs"
 	"encoding/json"
 	"fmt"
-	"go-crud-article/connection"
-	"go-crud-article/structs"
 	"io/ioutil"
 	"net/http"
 
@@ -121,4 +121,55 @@ func ListUsers(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(results)
+}
+
+func UpdateUser(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	usersID := vars["id"]
+
+	payloads, _ := ioutil.ReadAll(r.Body)
+
+	var usersUpdates structs.Users
+	json.Unmarshal(payloads, &usersUpdates)
+	var users structs.Users
+
+	if usersUpdates.Name == "" || usersUpdates.Age == 0 {
+		http.Error(w, "Please enter a name and age", http.StatusBadRequest)
+	} else {
+		connection.DB.First(&users, usersID)
+		connection.DB.Model(&users).Updates(&usersUpdates)
+
+		res := structs.Users{ID: users.ID, Name: usersUpdates.Name, Age: usersUpdates.Age}
+		result, err := json.Marshal(res)
+
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		} else {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			w.Write(result)
+		}
+	}
+}
+
+func DeleteUser(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	userID := vars["id"]
+
+	users := []structs.Users{}
+	connection.DB.First(&users, userID)
+	connection.DB.Delete(&users)
+
+	res := structs.Result{
+		Message: "Success delete user",
+	}
+	result, err := json.Marshal(res)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(result)
 }
