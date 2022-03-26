@@ -158,16 +158,20 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 
 	var user structs.Users
 	connection.DB.Where("id = ?", userID).First(&user)
-	connection.DB.Delete(&user)
 
-	res := structs.Result{ListUser: user, Message: "Success delete user"}
-	result, err := json.Marshal(res)
+	if user.ID == 0 {
+		http.Error(w, "User not found", http.StatusNotFound)
+	} else {
+		connection.DB.Delete(&user)
+		res := structs.Result{ListUser: user, Message: "Data berhasil dihapus"}
+		result, err := json.Marshal(res)
 
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		} else {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			w.Write(result)
+		}
 	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(result)
 }
