@@ -14,8 +14,8 @@ var (
 )
 
 func Connect() {
-	DB, Err = gorm.Open("mysql", "dani:so71dCaLpTm7tK0i@/dani?charset=utf8&parseTime=True")
-	// DB, Err = gorm.Open("mysql", "root:@/data_nasabah?charset=utf8&parseTime=True")
+	// DB, Err = gorm.Open("mysql", "dani:so71dCaLpTm7tK0i@/dani?charset=utf8&parseTime=True")
+	DB, Err = gorm.Open("mysql", "root:@/data_nasabah?charset=utf8&parseTime=True")
 
 	if Err != nil {
 		log.Println("Connection failed", Err)

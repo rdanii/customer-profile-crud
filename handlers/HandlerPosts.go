@@ -151,23 +151,3 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 }
-
-func DeleteUser(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	userID := vars["id"]
-
-	var user structs.Users
-	connection.DB.First(&user, userID)
-	connection.DB.Delete(&user)
-
-	res := structs.Result{Message: "Success delete user"}
-	result, err := json.Marshal(res)
-
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(result)
-}
