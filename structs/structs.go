@@ -1,9 +1,10 @@
 package structs
 
 type Users struct {
-	ID   int    `gorm:"primary_key" json:"id"`
-	Name string `json:"name"`
-	Age  int    `json:"age"`
+	ID       int    `gorm:"primary_key" json:"id"`
+	Name     string `json:"name"`
+	Age      int    `json:"age"`
+	Password string `json:"password"`
 }
 
 type Risk_profile struct {
@@ -16,6 +17,6 @@ type Risk_profile struct {
 }
 
 type Result struct {
-	ListUser interface{} `json:"list_user"`
-	Message  string      `json:"message"`
+	Data    interface{} `json:"data"`
+	Message string      `json:"message"`
 }

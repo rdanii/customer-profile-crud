@@ -9,38 +9,85 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func HomePage(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Welcome!")
 }
 
+func HashPassword(password string) (string, error) {
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+	return string(bytes), err
+}
+
+func Login(w http.ResponseWriter, r *http.Request) {
+	payloads, _ := ioutil.ReadAll(r.Body)
+
+	var users structs.Users
+	json.Unmarshal(payloads, &users)
+
+	var user structs.Users
+	connection.DB.Where("name = ?", users.Name).First(&user)
+
+	if user.ID == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("User not found"))
+		return
+	} else {
+		err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(users.Password))
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("Wrong password"))
+			return
+		}
+	}
+
+	res := structs.Result{Data: user, Message: "Login success"}
+	result, err := json.Marshal(res)
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Error"))
+		return
+	} else {
+		w.WriteHeader(http.StatusOK)
+		w.Write(result)
+		return
+	}
+}
+
 func CreateUser(w http.ResponseWriter, r *http.Request) {
 	payloads, _ := ioutil.ReadAll(r.Body)
 
-	var profile structs.Users
-	json.Unmarshal(payloads, &profile)
+	var user structs.Users
+	hash, _ := HashPassword(user.Password)
 
-	json.Unmarshal(payloads, &profile)
+	json.Unmarshal(payloads, &user)
 
-	if profile.Name == "" || profile.Age == 0 {
+	if user.Name == "" || user.Age == 0 {
 		http.Error(w, "Please enter a name and age", http.StatusBadRequest)
 	} else {
-		connection.DB.Create(&profile)
+		connection.DB.Create(&user)
 		res := structs.Risk_profile{
-			Userid:        profile.ID,
-			Users:         structs.Users{},
+			Userid: user.ID,
+			Users: structs.Users{
+				ID:       user.ID,
+				Name:     user.Name,
+				Age:      user.Age,
+				Password: hash,
+			},
 			Mm_percent:    0,
 			Bond_percent:  0,
 			Stock_percent: 0,
 			Total_percent: 0,
 		}
 
-		if profile.Age >= 30 {
+		if user.Age >= 30 {
 			res.Stock_percent = 72.5
 			res.Bond_percent = 21.5
 			res.Mm_percent = 100 - res.Stock_percent - res.Bond_percent
-		} else if profile.Age >= 20 {
+		} else if user.Age >= 20 {
 			res.Stock_percent = 54.5
 			res.Bond_percent = 25.5
 			res.Mm_percent = 100 - res.Stock_percent - res.Bond_percent
@@ -51,15 +98,15 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		}
 
 		res.Total_percent = res.Stock_percent + res.Bond_percent + res.Mm_percent
-
 		connection.DB.Create(&res)
-		profile := structs.Users{ID: profile.ID, Name: profile.Name, Age: profile.Age}
-		result, err := json.Marshal(profile)
+		user := structs.Users{ID: user.ID, Name: user.Name, Age: user.Age, Password: user.Password}
+		result, err := json.Marshal(user)
 
 		if err != nil {
-			panic(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 		} else {
 			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
 			w.Write(result)
 		}
 	}
@@ -67,14 +114,14 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 
 func DetailUser(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	profileID := vars["id"]
+	userID := vars["id"]
 
-	var profile structs.Users
-	connection.DB.First(&profile, profileID)
+	var user structs.Users
+	connection.DB.First(&user, userID)
 
 	res := structs.Risk_profile{
-		Userid:        profile.ID,
-		Users:         structs.Users{ID: profile.ID, Name: profile.Name, Age: profile.Age},
+		Userid:        user.ID,
+		Users:         structs.Users{ID: user.ID, Name: user.Name, Age: user.Age},
 		Mm_percent:    0,
 		Bond_percent:  0,
 		Stock_percent: 0,
@@ -84,7 +131,7 @@ func DetailUser(w http.ResponseWriter, r *http.Request) {
 	if res.Userid == 0 {
 		http.Error(w, "User not found", http.StatusNotFound)
 	} else {
-		connection.DB.Where("userid = ?", profile.ID).First(&res)
+		connection.DB.Where("userid = ?", user.ID).First(&res)
 		result, err := json.Marshal(res)
 
 		if err != nil {
@@ -108,8 +155,8 @@ func ListUsers(w http.ResponseWriter, r *http.Request) {
 		Find(&users)
 
 	res := structs.Result{
-		ListUser: users,
-		Message:  "Data berhasil didapatkan Page = " + page + " Take = " + take,
+		Data:    users,
+		Message: "Data berhasil didapatkan Page = " + page + " Take = " + take,
 	}
 
 	results, err := json.Marshal(res)
@@ -163,7 +210,7 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "User not found", http.StatusNotFound)
 	} else {
 		connection.DB.Delete(&user)
-		res := structs.Result{ListUser: user, Message: "Data berhasil dihapus"}
+		res := structs.Result{Data: user, Message: "Data berhasil dihapus"}
 		result, err := json.Marshal(res)
 
 		if err != nil {
