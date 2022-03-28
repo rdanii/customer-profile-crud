@@ -21,39 +21,40 @@ func HashPassword(password string) (string, error) {
 	return string(bytes), err
 }
 
+func CheckPasswordHash(password, hash string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	return err == nil
+}
+
 func Login(w http.ResponseWriter, r *http.Request) {
 	payloads, _ := ioutil.ReadAll(r.Body)
 
-	var users structs.Users
-	json.Unmarshal(payloads, &users)
-
 	var user structs.Users
-	connection.DB.Where("name = ?", users.Name).First(&user)
+	json.Unmarshal(payloads, &user)
 
-	if user.ID == 0 {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("User not found"))
-		return
+	var res structs.Users
+	connection.DB.Where("name = ?", user.Name).First(&res)
+
+	if res.Name == "" {
+		http.Error(w, "User not found", http.StatusNotFound)
 	} else {
-		err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(users.Password))
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("Wrong password"))
-			return
+		if CheckPasswordHash(user.Password, res.Password) {
+			res := structs.Result{Data: structs.Users{
+				ID:   res.ID,
+				Name: res.Name,
+				Age:  res.Age,
+			}, Message: "Login Success"}
+			result, err := json.Marshal(res)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			} else {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
+				w.Write(result)
+			}
+		} else {
+			http.Error(w, "Password not match", http.StatusBadRequest)
 		}
-	}
-
-	res := structs.Result{Data: user, Message: "Login success"}
-	result, err := json.Marshal(res)
-
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Error"))
-		return
-	} else {
-		w.WriteHeader(http.StatusOK)
-		w.Write(result)
-		return
 	}
 }
 
@@ -61,9 +62,9 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 	payloads, _ := ioutil.ReadAll(r.Body)
 
 	var user structs.Users
-	hash, _ := HashPassword(user.Password)
-
 	json.Unmarshal(payloads, &user)
+
+	hash, _ := HashPassword(user.Password)
 
 	if user.Name == "" || user.Age == 0 {
 		http.Error(w, "Please enter a name and age", http.StatusBadRequest)
@@ -83,18 +84,20 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 			Total_percent: 0,
 		}
 
-		if user.Age >= 30 {
+		sum := 55 - user.Age
+
+		if sum >= 30 {
 			res.Stock_percent = 72.5
 			res.Bond_percent = 21.5
-			res.Mm_percent = 100 - res.Stock_percent - res.Bond_percent
-		} else if user.Age >= 20 {
+			res.Mm_percent = 100 - (res.Stock_percent + res.Bond_percent)
+		} else if sum >= 20 {
 			res.Stock_percent = 54.5
 			res.Bond_percent = 25.5
-			res.Mm_percent = 100 - res.Stock_percent - res.Bond_percent
-		} else {
+			res.Mm_percent = 100 - (res.Stock_percent + res.Bond_percent)
+		} else if sum < 20 {
 			res.Stock_percent = 34.5
 			res.Bond_percent = 45.5
-			res.Mm_percent = 100 - res.Stock_percent - res.Bond_percent
+			res.Mm_percent = 100 - (res.Stock_percent + res.Bond_percent)
 		}
 
 		res.Total_percent = res.Stock_percent + res.Bond_percent + res.Mm_percent
@@ -210,6 +213,7 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "User not found", http.StatusNotFound)
 	} else {
 		connection.DB.Delete(&user)
+		connection.DB.Where("userid = ?", user.ID).Delete(&structs.Risk_profile{})
 		res := structs.Result{Data: user, Message: "Data berhasil dihapus"}
 		result, err := json.Marshal(res)
 
