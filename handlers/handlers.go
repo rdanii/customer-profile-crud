@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/rs/cors"
 )
 
 func HandleReq() {
@@ -20,5 +21,6 @@ func HandleReq() {
 	myRouter.HandleFunc("/user/{id}", DeleteUser).Methods("OPTIONS", "DELETE")
 	myRouter.HandleFunc("/user/login", Login).Methods("OPTIONS", "POST")
 
-	log.Fatal(http.ListenAndServe(":5002", myRouter))
+	handler := cors.AllowAll().Handler(myRouter)
+	log.Fatal(http.ListenAndServe(":5002", handler))
 }

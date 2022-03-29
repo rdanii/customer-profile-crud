@@ -6,6 +6,7 @@ require gorm.io/driver/mysql v1.3.2
 
 require (
 	github.com/jinzhu/gorm v1.9.16 // indirect
+	github.com/rs/cors v1.8.2 // indirect
 	golang.org/x/crypto v0.0.0-20220321153916-2c7772ba3064 // indirect
 )
 
