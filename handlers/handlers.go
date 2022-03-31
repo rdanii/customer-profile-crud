@@ -19,7 +19,7 @@ func HandleReq() {
 	myRouter.HandleFunc("/user/{id}", DetailUser).Methods("OPTIONS", "GET")
 	myRouter.HandleFunc("/user/{id}", UpdateUser).Methods("OPTIONS", "PUT")
 	myRouter.HandleFunc("/user/{id}", DeleteUser).Methods("OPTIONS", "DELETE")
-	myRouter.HandleFunc("/user/login", Login).Methods("OPTIONS", "POST")
+	myRouter.HandleFunc("/login", Login).Methods("OPTIONS", "POST")
 
 	handler := cors.AllowAll().Handler(myRouter)
 	log.Fatal(http.ListenAndServe(":5002", handler))
