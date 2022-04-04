@@ -140,7 +140,7 @@ func ListUsers(w http.ResponseWriter, r *http.Request) {
 	take := r.URL.Query().Get("take")
 	if page == "" || take == "" {
 		page = "0"
-		take = "10"
+		take = "100"
 	}
 
 	users := []structs.Users{}
