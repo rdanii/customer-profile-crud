@@ -65,19 +65,14 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 	json.Unmarshal(payloads, &user)
 
 	hash, _ := HashPassword(user.Password)
+	user.Password = hash
 
 	if user.Name == "" || user.Age == 0 {
 		http.Error(w, "Please enter a name and age", http.StatusBadRequest)
 	} else {
 		connection.DB.Create(&user)
 		res := structs.Risk_profile{
-			Userid: user.ID,
-			Users: structs.Users{
-				ID:       user.ID,
-				Name:     user.Name,
-				Age:      user.Age,
-				Password: hash,
-			},
+			Userid:        user.ID,
 			Mm_percent:    0,
 			Bond_percent:  0,
 			Stock_percent: 0,
@@ -102,7 +97,10 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 
 		res.Total_percent = res.Stock_percent + res.Bond_percent + res.Mm_percent
 		connection.DB.Create(&res)
-		user := structs.Users{ID: user.ID, Name: user.Name, Age: user.Age, Password: user.Password}
+		user := structs.Result{
+			Data:    user,
+			Message: "Data berhasil ditambahkan",
+		}
 		result, err := json.Marshal(user)
 
 		if err != nil {
@@ -120,35 +118,30 @@ func DetailUser(w http.ResponseWriter, r *http.Request) {
 	userID := vars["id"]
 
 	var user structs.Users
-	connection.DB.First(&user, userID)
+	connection.DB.Preload("Risk_profile").Where("id = ?", userID).First(&user)
 
-	res := structs.Risk_profile{
-		Userid:        user.ID,
-		Users:         structs.Users{ID: user.ID, Name: user.Name, Age: user.Age},
-		Mm_percent:    0,
-		Bond_percent:  0,
-		Stock_percent: 0,
-		Total_percent: 0,
+	res := structs.Result{
+		Data:    user,
+		Message: "Data user berhasil didapatkan",
 	}
 
-	if res.Userid == 0 {
-		http.Error(w, "User not found", http.StatusNotFound)
-	} else {
-		connection.DB.Where("userid = ?", user.ID).First(&res)
-		result, err := json.Marshal(res)
+	result, err := json.Marshal(res)
 
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		} else {
-			w.Header().Set("Content-Type", "application/json")
-			w.Write(result)
-		}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	} else {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(result)
 	}
 }
 
 func ListUsers(w http.ResponseWriter, r *http.Request) {
 	page := r.URL.Query().Get("page")
 	take := r.URL.Query().Get("take")
+	if page == "" || take == "" {
+		page = "0"
+		take = "10"
+	}
 
 	users := []structs.Users{}
 	connection.DB.
